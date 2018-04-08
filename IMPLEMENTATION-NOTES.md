@@ -3,7 +3,8 @@
 
 ## 1. Introduction
 
-The implementation of this small Lisp in Dart is based on that of my L2Lisp, ver. 7.2 and later, 
+The implementation of this small Lisp in Dart is based on that of L2Lisp, 
+[ver. 7.2 (l2lisp-in-python)](https://github.com/nukata/l2lisp-in-python) and later, 
 and features **automatic avoidance of free symbol capture in macro expansion**, 
 tail call optimization (which also implies tail recursion optimization), 
 and expansion of quasi-quotations, among others.
@@ -95,7 +96,7 @@ An environment is implemented with a Lisp list (a instance of user-defined `Cell
 
 ------------------------------
 
-Note:
+**Note:**
 Most parameters are likely to be at level 0 and then refer to the head of the environment, i.e. a *car* of 
 a Lisp list, as their call-frame.
 And each element of the frame can be accessed in constant time since the frame is a `List` of Dart.
@@ -149,7 +150,7 @@ class Arg {
 
 ------------------------------
 
-Note:
+**Note:**
 So far I have sketched the data structure of the Lisp interpreter.
 Since the algorithm for the interpreter would be determined roughly by the specification of 
 the Lisp language, the above might suffice to build a skeleton of the interpreter.
@@ -197,7 +198,7 @@ foldl(x, Cell j, fn(y, z)) {
 
 ------------------------------
 
-Note:
+**Note:**
 `foldl` was named after the function of the same name in Haskell.
 In order to allow `foldl` to be applied to `null`, which means *nil* in Lisp, it is not defined as a method of `Cell`.
 
@@ -224,7 +225,7 @@ in the way to make use of duck typing which Dart has as a scripting language:
 
 ------------------------------
 
-Note:
+**Note:**
 This is not a thing to be highly evaluated.
 Orthodoxly speaking, branching on type should be preferred.
 But it is charm of Dart that it can be loose in this way if favored.
@@ -245,7 +246,7 @@ to the `globals` member of the `Interp` class, using the constructed symbol as t
 
 ------------------------------
 
-Note:
+**Note:**
 The second argument of the `def` medthod, `carity`, is a value that is made up from the arity of the function 
 and whether the function has variable length arguments, i.e., *&rest* args.
 "Carity" is my coinage; I have not decided yet what "c" of c + arity means:  combined, composite, or calculated.
@@ -346,7 +347,8 @@ class Keyword extends Sym {
 
 
 The `eval` method of the `Interp` class evaluates a Lisp expression in a similar way 
-with the method of the same name in my L2Lisp ver. 9.2.
+with the method of the same name in
+[L2Lisp ver. 9 (l2lisp-in-java)](https://github.com/nukata/l2lisp-in-java).
 
 ```Dart
   /// Evaluate a Lisp expression in an environment.
@@ -498,7 +500,7 @@ The previous `env` has been used only to evaluate the actual arguments in `fn.ma
 
 ------------------------------
 
-Note:
+**Note:**
 An environment held by a `Closure` instance is no other than the environment existed when the original 
 lambda expression was evaluated and replaced with the `Closure` instance.
 Static scoping is implemented by discarding the current `env` and building a new one upon this environment.
@@ -516,7 +518,7 @@ Thus tail call optimization is implemented.
 
 ------------------------------
 
-Note:
+**Note:**
 If such a lambda expression happens to be the body of some tail recursive function, 
 its tail recursive call will be back to the same level of nesting of its first call.
 Thus tail recursion optimization is implemented.
@@ -538,7 +540,8 @@ It is likely to happen since the macro users do not necessarily know the detail 
 the macro definition.
 
 
-I will show you an example based on the discussion of my L2Lisp ver. 2.0.
+I will show you an example based on the discussion of 
+[L2Lisp ver. 2.0 (l2lisp-in-pascal)](https://github.com/nukata/l2lisp-in-pascal/tree/master/v2.0).
 The following is an interactive session of GNU CLISP 2.48, an implementation of Common Lisp:
 
 ```
@@ -676,18 +679,18 @@ before expanding the macros and quasi-quotations, the capture is avoided automat
 
 ------------------------------
 
-Note:
+**Note:**
 This avoidance will be useful also for Scheme, a popular language that unifies name spaces for functions and variables,
 if you want to adopt traditional macros similar to those of Common Lisp for it.
 I described and implemented the avoidance with L2Lisp ver. 2.0 in 2007.
-Now I wonder if there exists such a dialect of Scheme.
+I wonder if there exists such a dialect of Scheme.
 
 ------------------------------
 
 
 ------------------------------
 
-Note:
+**Note:**
 By the way, as to another type of variable capture given in the ninth chapter of the book,
 **Macro Argument Capture**, it is as dangerous as in Common Lisp.
 But the danger can be avoided also as safely as in Common Lisp by using the `gensym` function.

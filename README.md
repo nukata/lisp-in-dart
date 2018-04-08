@@ -1,15 +1,16 @@
 # Lisp in Dart
 
-This is a small Lisp interpreter in Dart.
-It runs in Dart 1.24 and 2.0.
-I had presented it under the MIT License
-at <http://www.oki-osk.jp/esc/dart/lisp.html>
-until last spring, which has been shut down now.
+This is a small Lisp interpreter I wrote 3 years ago (2015) in Dart.
+It had been presented under the MIT License at
+<http://www.oki-osk.jp/esc/dart/lisp.html> until last spring (2017).
+Now I have slightly modified it to match Dart 2.0.
 
 See [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md)
 for the details of implementation.
 
 ## How to use
+
+It runs in Dart 1.24 and later.
 
 ```
 $ dart lisp.dart
@@ -21,7 +22,7 @@ $ dart lisp.dart
 $
 ```
 
-You can give a file name of your Lisp script to run.
+You can give it a file name of your Lisp script.
 
 ```
 $ dart lisp.dart examples/fib15.l
@@ -29,8 +30,8 @@ $ dart lisp.dart examples/fib15.l
 $
 ```
 
-Putting a "`-`" after the file name, the script will run and then
-you will enter an interactive session with the interpreter.
+If you put a "`-`" after the file name, it will
+begin an interactive session after running the file.
 
 ```
 $ dart lisp.dart examples/fib15.l -
@@ -83,5 +84,5 @@ by <https://github.com/zick/ZickStandardLisp>.
 
 ## License
 
-This interpreter is licensed under the MIT License.
-See [`lisp.dart`](lisp.dart#L1179-L1200).
+This interpreter is under the MIT License.
+See [`lisp.dart`](lisp.dart#L1188-L1209).

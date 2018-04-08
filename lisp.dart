@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-// Nukata Lisp 1.24 in Dart 2.0 (H27.3/16 - H30.3/25) by SUZUKI Hisao
+// Nukata Lisp 1.25 in Dart 2.0 (H27.3/16 - H30.4/8) by SUZUKI Hisao
 
 import "dart:async";
 import "dart:convert";
@@ -292,6 +292,9 @@ class Interp {
   /// Table of the global values of symbols
   final Map<Sym, Object> globals = {};
 
+  /// Standard output of the interpreter
+  StringSink cout = stdout;
+
   /// Set built-in functions etc. as the global values of symbols.
   Interp() {
     def("car", 1, (List a) => (a[0] as Cell)?.car);
@@ -327,9 +330,9 @@ class Interp {
         (y.cdr == null) ? x ~/ y.car : throw "one or two arguments expected";
     });
 
-    def("prin1", 1, (List a) { stdout.write(str(a[0], true)); return a[0]; });
-    def("princ", 1, (List a) { stdout.write(str(a[0], false)); return a[0]; });
-    def("terpri", 0, (List a) { stdout.writeln(); return true; });
+    def("prin1", 1, (List a) { cout.write(str(a[0], true)); return a[0]; });
+    def("princ", 1, (List a) { cout.write(str(a[0], false)); return a[0]; });
+    def("terpri", 0, (List a) { cout.writeln(); return true; });
 
     var gensymCounterSym = new Sym("*gensym-counter*");
     globals[gensymCounterSym] = 1;
@@ -350,7 +353,7 @@ class Interp {
     def("dump", 0, (List a) =>
         globals.keys.fold(null, (x, y) => new Cell(y, x)));
     globals[new Sym("*version*")] =
-      new Cell(1.24, new Cell("Dart", new Cell("Nukata Lisp", null)));
+      new Cell(1.25, new Cell("Dart", new Cell("Nukata Lisp", null)));
     // named after Tōkai-dō Mikawa-koku Nukata-gun (東海道 三河国 額田郡)
   }
 
@@ -969,8 +972,8 @@ final Sym quasiquoteSym = new Keyword("quasiquote");
 final Sym quoteSym = new Keyword("quote");
 final Sym setqSym = new Keyword("setq");
 
-/// Run each arg as a Lisp script in order; run interactively for no arg or -.
-main(List<String> args) async {
+// Make an initialized Lisp interpreter or null.
+Future<Interp> makeInterp() async {
   // Dart initializes static variables lazily.  Therefore, all keywords are
   // referred explicitly at the beginning of main so that they are initialized
   // as keywords before any occurrences of symbols of their names.
@@ -980,7 +983,13 @@ main(List<String> args) async {
   Future<String> fs = new Future.value(prelude);
   Stream<String> ss = new Stream.fromFuture(fs);
   bool ok = await run(interp, ss);
-  if (! ok)
+  return ok ? interp : null;
+}
+
+/// Run each arg as a Lisp script in order; run interactively for no arg or -.
+main(List<String> args) async {
+  Interp interp = await makeInterp();
+  if (interp == null)
     exit(1);
 
   for (String fileName in (args.isEmpty) ? ["-"] : args) {

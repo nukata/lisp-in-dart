@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-// Nukata Lisp 1.25 in Dart 2.0 (H27.3/16 - H30.4/8) by SUZUKI Hisao
+// Nukata Lisp 1.26 in Dart 2.0 (H27.3/16 - H30.4/9) by SUZUKI Hisao
 
 import "dart:async";
 import "dart:convert";
@@ -247,14 +247,14 @@ class Arg {
   Arg(this.level, this.offset, this.symbol);
   @override String toString() => "#$level:$offset:$symbol";
 
-  /// Set a value x to the location corresponding to the variable in env.
+  /// Set a value [x] to the location corresponding to the variable in [env].
   void setValue(x, Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
     env.car[offset] = x;
   }
 
-  /// Get a value from the location corresponding to the variable in env.
+  /// Get a value from the location corresponding to the variable in [env].
   getValue(Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
@@ -353,7 +353,7 @@ class Interp {
     def("dump", 0, (List a) =>
         globals.keys.fold(null, (x, y) => new Cell(y, x)));
     globals[new Sym("*version*")] =
-      new Cell(1.25, new Cell("Dart", new Cell("Nukata Lisp", null)));
+      new Cell(1.26, new Cell("Dart", new Cell("Nukata Lisp", null)));
     // named after Tōkai-dō Mikawa-koku Nukata-gun (東海道 三河国 額田郡)
   }
 
@@ -585,8 +585,8 @@ bool _makeArgTable(arg, Map<Sym, Arg> table) {
   }
 }
 
-/// Scan 'j' for formal arguments in 'table' and replace them with Args.
-/// And scan 'j' for free Args not in 'table' and promote their levels.
+/// Scan [j] for formal arguments in [table] and replace them with Args.
+/// And scan [j] for free Args not in [table] and promote their levels.
 _scanForArgs(j, Map<Sym, Arg> table) {
   if (j is Sym) {
     return table[j] ?? j;
@@ -625,7 +625,7 @@ _scanForQQ(j, Map<Sym, Arg> table, int level) {
   }
 }
 
-/// Get cdr of list x as a Cell or null.
+/// Get cdr of list [x] as a Cell or null.
 Cell cdrCell(Cell x) {
   var k = x.cdr;
   if (k is Cell)
@@ -639,7 +639,7 @@ Cell cdrCell(Cell x) {
 //----------------------------------------------------------------------
 // Quasi-Quotation
 
-/// Expand x of any quasi-quotation `x into the equivalent S-expression.
+/// Expand [x] of any quasi-quotation `x into the equivalent S-expression.
 qqExpand(x) {
   return _qqExpand0(x, 0);      // Begin with the nesting level 0.
 }
@@ -666,7 +666,7 @@ _qqExpand0(x, int level) {
 qqQuote(x) =>
   (x is Sym || x is Cell) ? new Cell(quoteSym, new Cell(x, null)) : x;
 
-// Expand x of `x so that the result can be used as an argument of append.
+// Expand [x] of `x so that the result can be used as an argument of append.
 // Example 1: (,a b) => h=(list a) t=((list 'b)) => ((list a 'b))
 // Example 2: (,a ,@(cons 2 3)) => h=(list a) t=((cons 2 3))
 //                              => ((cons a (cons 2 3)))
@@ -713,7 +713,7 @@ _qqConsCons(Cell x, Object y) =>
   (x == null) ? y :
   new Cell(consSym, new Cell(x.car, new Cell(_qqConsCons(x.cdr, y), null)));
 
-// Expand x.car (= y) of `x so that the result can be used as an arg of append.
+// Expand [y] = x.car of `x so that the result can be used as an arg of append.
 // Example: ,a => (list a); ,@(foo 1 2) => (foo 1 2); b => (list 'b)
 _qqExpand2(y, int level) {
   if (y is Cell) {
@@ -939,26 +939,29 @@ String _strListBody(Cell x, int count, Set<Cell> printed) {
 //----------------------------------------------------------------------
 
 /// Run REPL (Read-Eval-Print Loop).
-Future<bool> run(Interp interp, Stream<String> input) async {
+Future run(Interp interp, Stream<String> input) async {
   bool interactive = (input == null);
   input ??= stdin.transform(const Utf8Codec().decoder);
   input = input.transform(const LineSplitter());
   var lines = new StreamIterator(input);
   var reader = new Reader(lines);
   for (;;) {
-    if (interactive)
+    if (interactive) {
       stdout.write("> ");
-    try {
+      try {
+        var sExp = await reader.read();
+        if (sExp == #EOF)
+          return;
+        var x = interp.eval(sExp, null);
+        print(str(x));
+      } on Exception catch (ex) {
+        print(ex);
+      }
+    } else {
       var sExp = await reader.read();
       if (sExp == #EOF)
-        return true;            // Finished normally.
-      var x = interp.eval(sExp, null);
-      if (interactive)
-        print(str(x));
-    } on Exception catch (ex) {
-      print(ex);
-      if (! interactive)
-        return false;
+        return;
+      interp.eval(sExp, null);
     }
   }
 }
@@ -972,40 +975,40 @@ final Sym quasiquoteSym = new Keyword("quasiquote");
 final Sym quoteSym = new Keyword("quote");
 final Sym setqSym = new Keyword("setq");
 
-// Make an initialized Lisp interpreter or null.
+/// Make a Lisp interpreter initialized with [prelude].
 Future<Interp> makeInterp() async {
   // Dart initializes static variables lazily.  Therefore, all keywords are
-  // referred explicitly at the beginning of main so that they are initialized
-  // as keywords before any occurrences of symbols of their names.
+  // referred explicitly here so that they are initialized as keywords
+  // before any occurrences of symbols of their names.
   [condSym, lambdaSym, macroSym, prognSym, quasiquoteSym, quoteSym, setqSym];
 
   var interp = new Interp();
   Future<String> fs = new Future.value(prelude);
   Stream<String> ss = new Stream.fromFuture(fs);
-  bool ok = await run(interp, ss);
-  return ok ? interp : null;
+  await run(interp, ss);
+  return interp;
 }
 
 /// Run each arg as a Lisp script in order; run interactively for no arg or -.
 main(List<String> args) async {
-  Interp interp = await makeInterp();
-  if (interp == null)
-    exit(1);
-
-  for (String fileName in (args.isEmpty) ? ["-"] : args) {
-    if (fileName == "-") {
-      await run(interp, null);
-      print("Goodbye");
-    } else {
-      var file = new File(fileName);
-      Stream<List<int>> bytes = file.openRead();
-      Stream<String> input = bytes.transform(const Utf8Codec().decoder);
-      bool ok = await run(interp, input);
-      if (! ok)
-        exit(1);
+  try {
+    Interp interp = await makeInterp();
+    for (String fileName in (args.isEmpty) ? ["-"] : args) {
+      if (fileName == "-") {
+        await run(interp, null);
+        print("Goodbye");
+      } else {
+        var file = new File(fileName);
+        Stream<List<int>> bytes = file.openRead();
+        Stream<String> input = bytes.transform(const Utf8Codec().decoder);
+        await run(interp, input);
+      }
     }
+    exit(0);
+  } on Exception catch (ex) {
+    print(ex);
+    exit(1);
   }
-  exit(0);
 }
 
 /// Lisp initialization script

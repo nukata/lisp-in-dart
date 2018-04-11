@@ -8,7 +8,7 @@ The implementation of this Lisp is largely based on that of L2Lisp,
 It features:
 
  - A sort of subset of Emacs Lisp, but being Lisp-1 with lexical scoping
- - Very few built-ins -- even defun is defined in the `prelude` as follows:
+ - Very few built-ins -- even *defun* is defined in the `prelude` as follows:
    ```Lisp
    (defmacro defun (name args &rest body)
      `(progn (setq ,name (lambda ,args ,@body))

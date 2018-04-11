@@ -1,15 +1,24 @@
 # Implementation Notes
 
+<a name="1"></a>
+## 1. Overview
 
-## 1. Introduction
+The implementation of this Lisp is largely based on that of L2Lisp, 
+[ver. 7.2 (l2lisp-in-python)](https://github.com/nukata/l2lisp-in-python) and later.
+It features:
 
-The implementation of this small Lisp in Dart is based on that of L2Lisp, 
-[ver. 7.2 (l2lisp-in-python)](https://github.com/nukata/l2lisp-in-python) and later, 
-and features **automatic avoidance of free symbol capture in macro expansion**, 
-tail call optimization (which also implies tail recursion optimization), 
-and expansion of quasi-quotations, among others.
+ - A sort of subset of Emacs Lisp, but being Lisp-1 with lexical scoping
+ - Very few built-ins -- even defun is defined in the `prelude` as follows:
+   ```Lisp
+   (defmacro defun (name args &rest body)
+     `(progn (setq ,name (lambda ,args ,@body))
+             ',name))
+   ```
+ - Tail call optimization, which also implies tail recursion optimization ([§4](#4))
+ - Automatic avoidance of free symbol capture in macro expansion ([§5](#5))
 
 
+<a name="2"></a>
 ## 2. Inner Representations of Lisp Expressions
 
 
@@ -23,7 +32,7 @@ in order to be treated specially as expression keywords.
 A list of Lisp is represented as a linked list of instances of the `Cell` class,
 which is defined to represent *cons* cells.
 An instance of `Cell` consists of two members, named `car` and `cdr` respectively by tradition.
-These classes are discussed in the next section.
+These classes are discussed in the next section ([§3](#3)).
 
 
 |  Lisp Expression                 | Inner Representation               |
@@ -159,7 +168,7 @@ The follwing three sections describing the details of the interpreter are supple
 ------------------------------
 
 
-
+<a name="3"></a>
 ## 3. Lists, Symbols and Built-in Functions
 
 The following is the definition of the `Cell` class, which represents lists of Lisp internally.
@@ -342,7 +351,7 @@ class Keyword extends Sym {
 ```
 
 
-
+<a name="4"></a>
 ## 4. Expression Evaluation and Tail Call Optimization
 
 
@@ -527,7 +536,7 @@ Thus tail recursion optimization is implemented.
 
 
 
-
+<a name="5"></a>
 ## 5. Automatic Avoidance of Free Symbol Capture in Macro Expansion
 
 
@@ -614,7 +623,7 @@ The `Closure` instance here has replaced the parameter *x* occurring in the expr
 *#0:0:x* **before** expanding the macro application *(m 3)* to *(setq x 3)*.
 
 To see how the replacement and expansion above are implemented,
-look at the branch in the `eval` method (described in the previous section) that covers the compilation of a lambda expression:
+look at the branch in the `eval` method ([§4](#4)) that covers the compilation of a lambda expression:
 
 ```Dart
             } else if (fn == lambdaSym) {
@@ -682,7 +691,6 @@ before expanding the macros and quasi-quotations, the capture is avoided automat
 **Note:**
 This avoidance will be useful also for Scheme, a popular language that unifies name spaces for functions and variables,
 if you want to adopt traditional macros similar to those of Common Lisp for it.
-I described and implemented the avoidance with L2Lisp ver. 2.0 in 2007.
 I wonder if there exists such a dialect of Scheme.
 
 ------------------------------
@@ -694,9 +702,9 @@ I wonder if there exists such a dialect of Scheme.
 By the way, as to another type of variable capture given in the ninth chapter of the book,
 **Macro Argument Capture**, it is as dangerous as in Common Lisp.
 But the danger can be avoided also as safely as in Common Lisp by using the `gensym` function.
-The following is such an example from the `prelude` string of the interpreter.
+The following is such an example from the `prelude` of the interpreter.
 
-```
+```Lisp
 (defmacro dolist (spec &rest body) ; (dolist (name list [result]) body...)
   (let ((name (car spec))
         (list (gensym)))
@@ -711,11 +719,7 @@ The following is such an example from the `prelude` string of the interpreter.
                ,(caddr spec))))))
 ```
 
-This will be compiled as follows.
-Note also that the local variable *list* introduced by *let* is replaced with the `Arg` instance *#0:1:list*,
-which is distinguished from the built-in function *list* introduced by the expansion of quasi-quotations.
-(i.e., this serves also as an example of automatic avoidance of free symbol capture at the same time).
-
+This will be compiled as follows:
 
 ```
 > dolist
@@ -727,6 +731,9 @@ name (list 'car #0:1:list)) #1:1:body))) (list (list 'setq #0:1:list (list 'cdr
 > 
 ``` 
 
+Note also that the local variable *list* introduced by *let* is replaced with the `Arg` instance *#0:1:list*,
+which is distinguished from the built-in function *list* introduced by the expansion of quasi-quotations.
+This is another example of **automatic avoidance of free symbol capture**.
 
 Below is an example of its application.
 

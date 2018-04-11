@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-// Nukata Lisp 1.26 in Dart 2.0 (H27.3/16 - H30.4/9) by SUZUKI Hisao
+// Nukata Lisp 1.26 in Dart 2.0 (H27.3/16 - H30.4/11) by SUZUKI Hisao
 
 import "dart:async";
 import "dart:convert";
@@ -54,7 +54,7 @@ class Sym {
   /// The table of interned symbols
   static final Map<String, Sym> table = {};
 
-  /// Construct an interned symbol; construct a Keyword if isKeyword holds.
+  /// Construct an interned symbol; construct a [Keyword] if [isKeyword] holds.
   factory Sym(String name, [bool isKeyword=false]) {
     var result = table[name];
     assert(result == null || ! isKeyword);
@@ -605,7 +605,7 @@ _scanForArgs(j, Map<Sym, Arg> table) {
   }
 }
 
-/// Scan for quasi-quotes and _scanForArgs them depending on the nesting level.
+/// Scan for quasi-quotes & [_scanForArgs] them depending on the nesting level.
 _scanForQQ(j, Map<Sym, Arg> table, int level) {
   if (j is Cell) {
     var k = j.car;
@@ -662,7 +662,7 @@ _qqExpand0(x, int level) {
   }
 }
 
-/// Quote x so that the result evaluates to x.
+/// Quote [x] so that the result evaluates to [x].
 qqQuote(x) =>
   (x is Sym || x is Cell) ? new Cell(quoteSym, new Cell(x, null)) : x;
 
@@ -804,7 +804,7 @@ class Reader {
     }
   }
 
-  /// Read the next token and set it to _token.
+  /// Read the next token and set it to [_token].
   Future _readToken() async {
     while (! _tokens.moveNext() || _erred) { // line ends or erred last time
       _erred = false;

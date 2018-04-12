@@ -48,23 +48,30 @@ $
 
 ## Examples
 
-There are four examples under the `examples` folder.
-All the examples also run in Emacs Lisp and Common Lisp.
-You will find this Lisp comparable to Emacs Lisp implemented with C.
-You will see how *Dart is fast!*
+There are four files ending with `.l` under the `examples` folder.
+These run also in Emacs Lisp and Common Lisp.
+You will find the Lisp in Dart comparably fast to Emacs Lisp which is
+written in C.
 
 ```
 $ dart lisp.dart examples/qsort.l
 (1 1 2 3 3 4 5 5 5 6 7 8 9 9 9)
-$ emacs -batch -l examples/qsort.l
+$ 
+```
 
-(1 1 2 3 3 4 5 5 5 6 7 8 9 9 9)
-$ clisp examples/qsort.l
+```
+$ emacs -batch -l examples/qsort.l
 
 (1 1 2 3 3 4 5 5 5 6 7 8 9 9 9)
 $ 
 ```
 
+```
+$ clisp examples/qsort.l
+
+(1 1 2 3 3 4 5 5 5 6 7 8 9 9 9)
+$ 
+```
 
 - [`qsort.l`](examples/qsort.l)
   performs a quick sort.
@@ -79,10 +86,23 @@ $
   calculates Fibonacci for 15 on a meta-circular Lisp evaluator 
   on a meta-circular Lisp evaluator.
 
+There is one more example:
+
+- [`interp_in_isolate.dart`](examples/interp_in_isolate.dart)
+  runs a Lisp interpreter in another isolate of Dart.
+  You can embed an interpreter within your _Flutter_ app in the same way.
+
+```
+$ dart examples/interp_in_isolate.dart
+=> 11
+=> 1
+=> (1)
+```
+
 The examples of `eval-fib15.l` and `eval-eval-fib15.l` are inspired 
 by <https://github.com/zick/ZickStandardLisp>.
 
 ## License
 
-This interpreter is under the MIT License.
+This is under the MIT License.
 See [`lisp.dart`](lisp.dart#L1191-L1212).

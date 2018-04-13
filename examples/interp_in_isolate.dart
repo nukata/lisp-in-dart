@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-// An example of running the Lisp interpreter in another isolate
+// An example of running Lisp in another isolate
 
 import "dart:async";
 import "dart:io";
@@ -39,7 +39,7 @@ Future resloop(SendPort sp) async {
   }
 }
 
-// Run the Lisp interpreter in another isolate
+// Run Lisp in another isolate.
 main(List<String> args) async {
   var rp = new ReceivePort();
   Isolate.spawn(resloop, rp.sendPort);

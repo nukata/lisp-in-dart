@@ -27,7 +27,7 @@ Future resloop(SendPort sp) async {
     lisp.Interp interp = await lisp.makeInterp();
     interp.cout = new SendPortOut(sp);
 
-    var rf = new StreamIterator(rp);
+    StreamIterator<String> rf = new StreamIterator(rp.cast<String>());
     var reader = new lisp.Reader(rf);
     for (;;) {
       var sExp = await reader.read();

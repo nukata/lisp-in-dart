@@ -1,5 +1,5 @@
 #!/usr/bin/env dart
-// Nukata Lisp 1.26 in Dart 2.0 (H27.3/16 - H30.4/11) by SUZUKI Hisao
+// Nukata Lisp 1.27 in Dart 2.5 (H27.03.16/R01.10.27) by SUZUKI Hisao
 
 import "dart:async";
 import "dart:convert";
@@ -49,7 +49,7 @@ class Sym {
   Sym.internal(this.name);
 
   @override String toString() => name;
-  // @override int get hashCode => name.hashCode; // Key to Speed for old Dart
+  @override int get hashCode => name.hashCode; // Key to Speed for Dart
 
   /// The table of interned symbols
   static final Map<String, Sym> table = {};
@@ -353,7 +353,7 @@ class Interp {
     def("dump", 0, (List a) =>
         globals.keys.fold(null, (x, y) => new Cell(y, x)));
     globals[new Sym("*version*")] =
-      new Cell(1.26, new Cell("Dart", new Cell("Nukata Lisp", null)));
+      new Cell(1.27, new Cell("Dart", new Cell("Nukata Lisp", null)));
     // named after Tōkai-dō Mikawa-koku Nukata-gun (東海道 三河国 額田郡)
   }
 

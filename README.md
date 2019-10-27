@@ -1,12 +1,23 @@
 # Lisp in Dart
 
-This is a small Lisp interpreter I wrote 3 years ago (2015) in Dart.
+This is a small Lisp interpreter I wrote in 2015 (H27) in Dart.
 It had been presented under the MIT License at
-<http://www.oki-osk.jp/esc/dart/lisp.html> until last spring (2017).
-Now I have slightly modified it to match Dart 2.0.
+<http://www.oki-osk.jp/esc/dart/lisp.html> (broken link)
+until the spring of 2017 (H29).
+I slightly modified it to match Dart 2.0 in 2018 (H30).
+
+Now in 2019 (R1), I found the old hack in `Sym` class
+
+```Dart
+  @override int get hashCode => name.hashCode;
+```
+
+which had once accelerated the interpreter is effective again in Dart 2.5.
+So I included the hack in `Sym` class again.
+
 
 See [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md)
-for the details of implementation.
+for other details of the implementation.
 
 ## How to use
 

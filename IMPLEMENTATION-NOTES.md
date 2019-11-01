@@ -37,7 +37,7 @@ These classes are discussed in the next section ([§3](#3)).
 
 |  Lisp Expression                 | Inner Representation               |
 |:---------------------------------|:-----------------------------------|
-| numbers *1*, *2.3*               | `num` (`int` & `double`)           |
+| numbers *1*, *2.3*               | `num` (`int`, `double`), `BigInt`  |
 | strings *"abc"*, *"hello!\n"*    | `String`                           |
 | *t*                              | `true`                             |
 | *nil*                            | `null`                             |
@@ -141,14 +141,14 @@ class Arg {
   Arg(this.level, this.offset, this.symbol);
   @override String toString() => "#$level:$offset:$symbol";
 
-  /// Set a value x to the location corresponding to the variable in env.
+  /// Sets a value [x] to the location corresponding to the variable in [env].
   void setValue(x, Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
     env.car[offset] = x;
   }
 
-  /// Get a value from the location corresponding to the variable in env.
+  /// Gets a value from the location corresponding to the variable in [env].
   getValue(Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
@@ -247,7 +247,7 @@ it constructs a Lisp symbol from the string parameter `name` and stores the `Bui
 to the `globals` member of the `Interp` class, using the constructed symbol as the key to the instance:
 
 ```Dart
-  /// Define a built-in function by giving a name, an arity, and a body.
+  /// Defines a built-in function by giving a name, an arity, and a body.
   void def(String name, int carity, BuiltInFuncBody body) {
     globals[new Sym(name)] = new BuiltInFunc(name, carity, body);
   }
@@ -270,7 +270,7 @@ The *&rest* args are passed as a `Cell` list.
     def("-", -2, (List a) {
       var x = a[0];
       Cell y = a[1];
-      return (y == null) ? -x : foldl(x, y, (i, j) => i - j);
+      return (y == null) ? -x : foldl(x, y, (i, j) => subtract(i, j));
     });
 ```
 
@@ -307,16 +307,17 @@ It stores the constructed symbol to the internal `table` in order to implement t
 class Sym {
   final String name;
 
-  /// Construct a symbol that is not interned.
+  /// Constructs a symbol that is not interned.
   Sym.internal(this.name);
 
   @override String toString() => name;
-  // @override int get hashCode => name.hashCode; // Key to Speed for old Dart
+  @override int get hashCode => name.hashCode; // Key to Speed for Dart
 
   /// The table of interned symbols
   static final Map<String, Sym> table = {};
 
-  /// Construct an interned symbol; construct a Keyword if isKeyword holds.
+  /// Constructs an interned symbol.
+  /// Constructs a Keyword if isKeyword holds.
   factory Sym(String name, [bool isKeyword=false]) {
     var result = table[name];
     assert(result == null || ! isKeyword);
@@ -346,7 +347,7 @@ this makes the operation to *read* Lisp expressions simple.
 /// Expression keyword
 class Keyword extends Sym {
   Keyword.internal(String name): super.internal(name);
-  factory Keyword(String name) => new Sym(name, true);
+  factory Keyword(String name) => Sym(name, true);
 }
 ```
 
@@ -360,7 +361,7 @@ with the method of the same name in
 [L2Lisp ver. 9 (l2lisp-in-java)](https://github.com/nukata/l2lisp-in-java).
 
 ```Dart
-  /// Evaluate a Lisp expression in an environment.
+  /// Evaluates a Lisp expression in an environment.
   eval(x, Cell env) {
     try {
       for (;;) {
@@ -369,7 +370,7 @@ with the method of the same name in
         } else if (x is Sym) {
           if (globals.containsKey(x))
             return globals[x];
-          throw new EvalException("void variable", x);
+          throw EvalException("void variable", x);
         } else if (x is Cell) {
           var fn = x.car;
           Cell arg = cdrCell(x);
@@ -377,7 +378,7 @@ with the method of the same name in
             if (fn == quoteSym) {
               if (arg != null && arg.cdr == null)
                 return arg.car;
-              throw new EvalException("bad quote", x);
+              throw EvalException("bad quote", x);
             } else if (fn == prognSym) {
               x = _evalProgN(arg, env);
             } else if (fn == condSym) {
@@ -388,22 +389,22 @@ with the method of the same name in
               return _compile(arg, env, Closure.make);
             } else if (fn == macroSym) {
               if (env != null)
-                throw new EvalException("nested macro", x);
+                throw EvalException("nested macro", x);
               return _compile(arg, null, Macro.make);
             } else if (fn == quasiquoteSym) {
               if (arg != null && arg.cdr == null)
                 x = qqExpand(arg.car);
               else
-                throw new EvalException("bad quasiquote", x);
+                throw EvalException("bad quasiquote", x);
             } else {
-              throw new EvalException("bad keyword", fn);
+              throw EvalException("bad keyword", fn);
             }
           } else {      // Application of a function
-            // Expand fn = eval(fn, env) here on Sym for speed.
+            // Expands fn = eval(fn, env) here on Sym for speed.
             if (fn is Sym) {
               fn = globals[fn];
               if (fn == null)
-                throw new EvalException("undefined", x.car);
+                throw EvalException("undefined", x.car);
             } else {
               fn = eval(fn, env);
             }
@@ -416,7 +417,7 @@ with the method of the same name in
             } else if (fn is BuiltInFunc) {
               return fn.evalWith(this, arg, env);
             } else {
-              throw new EvalException("not applicable", fn);
+              throw EvalException("not applicable", fn);
             }
           }
         } else if (x is Lambda) {
@@ -453,7 +454,7 @@ assumed to be a Lisp list *(E1 E2 ... En)*,
 from *E1* to *En-1* in turn and returns the tail expression *En*, not evaluating it:
 
 ```Dart
-  /// (progn E1 E2.. En) => Evaluate E1, E2, .. except for En and return it.
+  /// (progn E1 E2.. En) => Evaluates E1, E2, .. except for En and returns it.
   _evalProgN(Cell j, Cell env) {
     if (j == null)
       return null;
@@ -471,7 +472,7 @@ from *E1* to *En-1* in turn and returns the tail expression *En*, not evaluating
 where the function `cdrCell` is defined as follows:
 
 ```Dart
-/// Get cdr of list x as a Cell or null.
+/// Gets cdr of list [x] as a Cell or null.
 Cell cdrCell(Cell x) {
   var k = x.cdr;
   if (k is Cell)
@@ -479,7 +480,7 @@ Cell cdrCell(Cell x) {
   else if (k == null)
     return null;
   else
-    throw new EvalException("proper list expected", x);
+    throw EvalException("proper list expected", x);
 }
 ```
 
@@ -634,7 +635,7 @@ look at the branch in the `eval` method ([§4](#4)) that covers the compilation 
 where the `_compile` method is defined as follows:
 
 ```Dart
-  /// Compile a Lisp list (macro ...) or (lambda ...).
+  /// Compiles a Lisp list (macro ...) or (lambda ...).
   DefinedFunc _compile(Cell arg, Cell env, FuncFactory make) {
     if (arg == null)
       throw new EvalException("arglist and body expected", arg);
@@ -643,7 +644,7 @@ where the `_compile` method is defined as follows:
     int arity = table.length;
     Cell body = cdrCell(arg);
     body = _scanForArgs(body, table);
-    body = _expandMacros(body, 20); // Expand mcrs statically up to 20 nestings
+    body = _expandMacros(body, 20); // Expands ms statically up to 20 nestings.
     body = _compileInners(body);
     return make((hasRest) ? -arity : arity, body, env);
   }
@@ -670,11 +671,11 @@ class Closure extends DefinedFunc {
   Closure.from(Lambda x, Cell env): this(x.carity, x.body, env);
   @override String toString() => "#<closure:$carity:${str(env)}:${str(body)}>";
 
-  /// Make an environment to evaluate the body from a list of actual args.
+  /// Makes an environment to evaluate the body from a list of actual args.
   Cell makeEnv(Interp interp, Cell arg, Cell interpEnv) {
     List frame = makeFrame(arg);
     evalFrame(frame, interp, interpEnv);
-    return new Cell(frame, env); // Prepend the frame to the closure's env.
+    return new Cell(frame, env); // Prepends the frame to the closure's env.
   }
 
   static DefinedFunc make(int carity, Cell body, Cell env) =>

@@ -1,9 +1,233 @@
 #!/usr/bin/env dart
-// Nukata Lisp 1.27 in Dart 2.5 (H27.03.16/R01.10.27) by SUZUKI Hisao
+// Nukata Lisp 2.00.0 in Dart 2.5 (H27.03.16/R01.11.02) by SUZUKI Hisao
 
 import "dart:async";
 import "dart:convert";
 import "dart:io";
+
+const intBits = 63;             // 53 for dart2js
+
+/// Converts [a] into an int if possible.
+normalize(BigInt a) => (a.bitLength <= intBits) ? a.toInt() : a;
+
+/// Is [a] a number?
+bool isNumber(a) => a is num || a is BigInt;
+
+/// Calculates [a] + [b].
+add(a, b) {
+  if (a is int) {
+    if (b is int) {
+      if (a.bitLength < intBits && b.bitLength < intBits) {
+        return a + b;
+      } else {
+        return normalize(BigInt.from(a) + BigInt.from(b));
+      }
+    } else if (b is double) {
+      return a + b;
+    } else if (b is BigInt) {
+      return normalize(BigInt.from(a) + b);
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a + b;
+    } else if (b is BigInt) {
+      return a + b.toDouble();
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return normalize(a + BigInt.from(b));
+    } else if (b is double) {
+      return a.toDouble() + b;
+    } else if (b is BigInt) {
+      return normalize(a + b);
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Calculates [a] - [b].
+subtract(a, b) {
+  if (a is int) {
+    if (b is int) {
+      if (a.bitLength < intBits && b.bitLength < intBits) {
+        return a - b;
+      } else {
+        return normalize(BigInt.from(a) - BigInt.from(b));
+      }
+    } else if (b is double) {
+      return a - b;
+    } else if (b is BigInt) {
+      return normalize(BigInt.from(a) - b);
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a - b;
+    } else if (b is BigInt) {
+      return a - b.toDouble();
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return normalize(a - BigInt.from(b));
+    } else if (b is double) {
+      return a.toDouble() - b;
+    } else if (b is BigInt) {
+      return normalize(a - b);
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Compares [a] and [b].
+/// Returns -1, 0 or 1 as [a] is less than, equal to, or greater than [b].
+num compare(a, b) {
+  if (a is int) {
+    if (b is int) {
+      if (a.bitLength < intBits && b.bitLength < intBits) {
+        return (a - b).sign;
+      } else {
+        return (BigInt.from(a) - BigInt.from(b)).sign;
+      }
+    } else if (b is double) {
+      return (a - b).sign;
+    } else if (b is BigInt) {
+      return (BigInt.from(a) - b).sign;
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return (a - b).sign;
+    } else if (b is BigInt) {
+      return (a - b.toDouble()).sign;
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return (a - BigInt.from(b)).sign;
+    } else if (b is double) {
+      return (a.toDouble() - b).sign;
+    } else if (b is BigInt) {
+      return (a - b).sign;
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Calculates [a] * [b].
+multiply(a, b) {
+  if (a is int) {
+    if (b is int) {
+      if (a.bitLength + b.bitLength < intBits) {
+        return a * b;
+      } else {
+        return normalize(BigInt.from(a) * BigInt.from(b));
+      }
+    } else if (b is double) {
+      return a * b;
+    } else if (b is BigInt) {
+      return BigInt.from(a) * b;
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a * b;
+    } else if (b is BigInt) {
+      return a * b.toDouble();
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return a * BigInt.from(b);
+    } else if (b is double) {
+      return a.toDouble() * b;
+    } else if (b is BigInt) {
+      return a * b;
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Calculates [a] / [b] (rounded quotient).
+double divide(a, b) {
+  if (a is int) {
+    if (b is num) {
+      return a / b;
+    } else if (b is BigInt) {
+      return BigInt.from(a) / b;
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a / b;
+    } else if (b is BigInt) {
+      return a / b.toDouble();
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return a / BigInt.from(b);
+    } else if (b is double) {
+      return a.toDouble() / b;
+    } else if (b is BigInt) {
+      return a / b;
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Calculates the quotient of [a] and [b].
+quotient(a, b) {
+  if (a is int) {
+    if (b is num) {
+      return a ~/ b;
+    } else if (b is BigInt) {
+      return normalize(BigInt.from(a) ~/ b);
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a ~/ b;
+    } else if (b is BigInt) {
+      return a ~/ b.toDouble();
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return normalize(a ~/ BigInt.from(b));
+    } else if (b is double) {
+      return a.toDouble() ~/ b;
+    } else if (b is BigInt) {
+      return normalize(a ~/ b);
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Calculates the remainder of the quotient of [a] and [b].
+remainder(a, b) {
+  if (a is int) {
+    if (b is num) {
+      return a.remainder(b);
+    } else if (b is BigInt) {
+      return normalize(BigInt.from(a).remainder(b));
+    }
+  } else if (a is double) {
+    if (b is num) {
+      return a.remainder(b);
+    } else if (b is BigInt) {
+      return a.remainder(b.toDouble());
+    }
+  } else if (a is BigInt) {
+    if (b is int) {
+      return normalize(a.remainder(BigInt.from(b)));
+    } else if (b is double) {
+      return a.toDouble().remainder(b);
+    } else if (b is BigInt) {
+      return normalize(a.remainder(b));
+    }
+  }
+  throw ArgumentError("$a, $b");
+}
+
+/// Tries to parse a string as an int, a BigInt or a double.
+/// Returns null if [s] was not parsed successfully.
+tryParse(String s) {
+  var r = BigInt.tryParse(s);
+  return (r == null) ? double.tryParse(s) : normalize(r);
+}
+
+//----------------------------------------------------------------------
 
 /// Cons cell
 class Cell {
@@ -28,7 +252,7 @@ Cell mapcar(Cell j, fn(x)) {
     d = mapcar(d, fn);
   if (identical(j.car, a) && identical(j.cdr, d))
     return j;
-  return new Cell(a, d);
+  return Cell(a, d);
 }
 
 /// foldl(x, (a b c), fn) => fn(fn(fn(x, a), b), c)
@@ -45,7 +269,7 @@ foldl(x, Cell j, fn(y, z)) {
 class Sym {
   final String name;
 
-  /// Construct a symbol that is not interned.
+  /// Constructs a symbol that is not interned.
   Sym.internal(this.name);
 
   @override String toString() => name;
@@ -54,7 +278,8 @@ class Sym {
   /// The table of interned symbols
   static final Map<String, Sym> table = {};
 
-  /// Construct an interned symbol; construct a [Keyword] if [isKeyword] holds.
+  /// Constructs an interned symbol.
+  /// Constructs a [Keyword] if [isKeyword] holds.
   factory Sym(String name, [bool isKeyword=false]) {
     var result = table[name];
     assert(result == null || ! isKeyword);
@@ -73,24 +298,24 @@ class Sym {
 /// Expression keyword
 class Keyword extends Sym {
   Keyword.internal(String name): super.internal(name);
-  factory Keyword(String name) => new Sym(name, true);
+  factory Keyword(String name) => Sym(name, true);
 }
 
 
-final Sym backQuoteSym = new Sym("`");
-final Sym commaAtSym = new Sym(",@");
-final Sym commaSym = new Sym(",");
-final Sym dotSym = new Sym(".");
-final Sym leftParenSym = new Sym("(");
-final Sym rightParenSym = new Sym(")");
-final Sym singleQuoteSym = new Sym("'");
+final Sym backQuoteSym = Sym("`");
+final Sym commaAtSym = Sym(",@");
+final Sym commaSym = Sym(",");
+final Sym dotSym = Sym(".");
+final Sym leftParenSym = Sym("(");
+final Sym rightParenSym = Sym(")");
+final Sym singleQuoteSym = Sym("'");
 
-final Sym appendSym = new Sym("append");
-final Sym consSym = new Sym("cons");
-final Sym listSym = new Sym("list");
-final Sym restSym = new Sym("&rest");
-final Sym unquoteSym = new Sym("unquote");
-final Sym unquoteSplicingSym = new Sym("unquote-splicing");
+final Sym appendSym = Sym("append");
+final Sym consSym = Sym("cons");
+final Sym listSym = Sym("list");
+final Sym restSym = Sym("&rest");
+final Sym unquoteSym = Sym("unquote");
+final Sym unquoteSplicingSym = Sym("unquote-splicing");
 
 //----------------------------------------------------------------------
 
@@ -105,23 +330,23 @@ abstract class Func {
 
   Func(this.carity);
 
-  /// Make a frame for local variables from a list of actual arguments.
+  /// Makes a frame for local variables from a list of actual arguments.
   List makeFrame(Cell arg) {
-    List frame = new List(arity);
+    List frame = List(arity);
     int n = fixedArgs;
     int i;
-    for (i = 0; i < n && arg != null; i++) { // Set the list of fixed args.
+    for (i = 0; i < n && arg != null; i++) { // Sets the list of fixed args.
       frame[i] = arg.car;
       arg = cdrCell(arg);
     }
     if (i != n || (arg != null && !hasRest))
-      throw new EvalException("arity not matched", this);
+      throw EvalException("arity not matched", this);
     if (hasRest)
       frame[n] = arg;
     return frame;
   }
 
-  /// Evaluate each expression in a frame.
+  /// Evaluates each expression in a frame.
   void evalFrame(List frame, Interp interp, Cell env) {
     int n = fixedArgs;
     for (int i = 0; i < n; i++)
@@ -131,7 +356,7 @@ abstract class Func {
       Cell y = null;
       for (Cell j = frame[n]; j != null; j = cdrCell(j)) {
         var e = interp.eval(j.car, env);
-        Cell x = new Cell(e, null);
+        Cell x = Cell(e, null);
         if (z == null)
           z = x;
         else
@@ -162,10 +387,10 @@ class Macro extends DefinedFunc {
   Macro(int carity, Cell body): super(carity, body);
   @override String toString() => "#<macro:$carity:${str(body)}>";
 
-  /// Expand the macro with a list of actual arguments.
+  /// Expands the macro with a list of actual arguments.
   expandWith(Interp interp, Cell arg) {
     List frame = makeFrame(arg);
-    Cell env = new Cell(frame, null);
+    Cell env = Cell(frame, null);
     var x = null;
     for (Cell j = body; j != null; j = cdrCell(j))
       x = interp.eval(j.car, env);
@@ -174,7 +399,7 @@ class Macro extends DefinedFunc {
 
   static DefinedFunc make(int carity, Cell body, Cell env) {
     assert(env == null);
-    return new Macro(carity, body);
+    return Macro(carity, body);
   }
 }
 
@@ -186,7 +411,7 @@ class Lambda extends DefinedFunc {
 
   static DefinedFunc make(int carity, Cell body, Cell env) {
     assert(env == null);
-    return new Lambda(carity, body);
+    return Lambda(carity, body);
   }
 }
 
@@ -200,15 +425,15 @@ class Closure extends DefinedFunc {
   Closure.from(Lambda x, Cell env): this(x.carity, x.body, env);
   @override String toString() => "#<closure:$carity:${str(env)}:${str(body)}>";
 
-  /// Make an environment to evaluate the body from a list of actual args.
+  /// Makes an environment to evaluate the body from a list of actual args.
   Cell makeEnv(Interp interp, Cell arg, Cell interpEnv) {
     List frame = makeFrame(arg);
     evalFrame(frame, interp, interpEnv);
-    return new Cell(frame, env); // Prepend the frame to the closure's env.
+    return Cell(frame, env);    // Prepends the frame to the closure's env.
   }
 
   static DefinedFunc make(int carity, Cell body, Cell env) =>
-    new Closure(carity, body, env);
+    Closure(carity, body, env);
 }
 
 
@@ -223,7 +448,7 @@ class BuiltInFunc extends Func {
   BuiltInFunc(this.name, int carity, this.body): super(carity);
   @override String toString() => "#<$name:$carity>";
 
-  /// Invoke the built-in function with a list of actual arguments.
+  /// Invokes the built-in function with a list of actual arguments.
   evalWith(Interp interp, Cell arg, Cell interpEnv) {
     List frame = makeFrame(arg);
     evalFrame(frame, interp, interpEnv);
@@ -232,7 +457,7 @@ class BuiltInFunc extends Func {
     } on EvalException catch (ex) {
       throw ex;
     } catch (ex) {
-      throw new EvalException("$ex -- $name", frame);
+      throw EvalException("$ex -- $name", frame);
     }
   }
 }
@@ -247,14 +472,14 @@ class Arg {
   Arg(this.level, this.offset, this.symbol);
   @override String toString() => "#$level:$offset:$symbol";
 
-  /// Set a value [x] to the location corresponding to the variable in [env].
+  /// Sets a value [x] to the location corresponding to the variable in [env].
   void setValue(x, Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
     env.car[offset] = x;
   }
 
-  /// Get a value from the location corresponding to the variable in [env].
+  /// Gets a value from the location corresponding to the variable in [env].
   getValue(Cell env) {
     for (int i = 0; i < level; i++)
       env = env.cdr;
@@ -295,11 +520,11 @@ class Interp {
   /// Standard output of the interpreter
   StringSink cout = stdout;
 
-  /// Set built-in functions etc. as the global values of symbols.
+  /// Sets built-in functions etc. as the global values of symbols.
   Interp() {
     def("car", 1, (List a) => (a[0] as Cell)?.car);
     def("cdr", 1, (List a) => (a[0] as Cell)?.cdr);
-    def("cons", 2, (List a) => new Cell(a[0], a[1]));
+    def("cons", 2, (List a) => Cell(a[0], a[1]));
     def("atom", 1, (List a) => (a[0] is Cell) ? null : true);
     def("eq", 2, (List a) => identical(a[0], a[1]) ? true : null);
 
@@ -308,33 +533,45 @@ class Interp {
     def("rplacd", 2, (List a) { a[0].cdr = a[1]; return a[1]; });
     def("length", 1, (List a) => (a[0] == null) ? 0 : a[0].length);
     def("stringp", 1, (List a) => (a[0] is String) ? true : null);
-    def("numberp", 1, (List a) => (a[0] is num) ? true : null);
-    def("eql", 2, (List a) => (a[0] == a[1]) ? true : null);
-    def("<", 2, (List a) => (a[0] < a[1]) ? true : null);
-    def("%", 2, (List a) => a[0].remainder(a[1]));
-    def("mod", 2, (List a) => (a[1] < 0) ? -((-a[0]) % a[1]) : a[0] % a[1]);
+    def("numberp", 1, (List a) => isNumber(a[0]) ? true : null);
+    def("eql", 2, (List a) {
+      var x = a[0];
+      var y = a[1];
+      return (x == y) ? true :
+        (isNumber(x) && isNumber(y) && compare(x, y) == 0) ? true : null;
+    });
+    def("<", 2, (List a) => (compare(a[0], a[1]) < 0) ? true : null);
+    def("%", 2, (List a) => remainder(a[0], a[1]));
+    def("mod", 2, (List a) {
+      var x = a[0];
+      var y = a[1];
+      var q = remainder(x, y);
+      return (compare(multiply(x, y), 0) < 0) ? add(q, y) : q;
+    });
 
-    def("+", -1, (List a) => foldl(0, a[0], (i, j) => i + j));
-    def("*", -1, (List a) => foldl(1, a[0], (i, j) => i * j));
+    def("+", -1, (List a) => foldl(0, a[0], (i, j) => add(i, j)));
+    def("*", -1, (List a) => foldl(1, a[0], (i, j) => multiply(i, j)));
     def("-", -2, (List a) {
       var x = a[0];
       Cell y = a[1];
-      return (y == null) ? -x : foldl(x, y, (i, j) => i - j);
+      return (y == null) ? -x : foldl(x, y, (i, j) => subtract(i, j));
     });
-    def("/", -3, (List a) => foldl(a[0] / a[1], a[2], (i, j) => i / j));
+    def("/", -3, (List a) =>
+        foldl(divide(a[0], a[1]), a[2], (i, j) => divide(i, j)));
 
     def("truncate", -2, (List a) {
       var x = a[0];
       Cell y = a[1];
-      return (y == null) ? x ~/ 1 :
-        (y.cdr == null) ? x ~/ y.car : throw "one or two arguments expected";
+      return (y == null) ? quotient(x, 1) :
+        (y.cdr == null) ? quotient(x, y.car) :
+        throw "one or two arguments expected";
     });
 
     def("prin1", 1, (List a) { cout.write(str(a[0], true)); return a[0]; });
     def("princ", 1, (List a) { cout.write(str(a[0], false)); return a[0]; });
     def("terpri", 0, (List a) { cout.writeln(); return true; });
 
-    var gensymCounterSym = new Sym("*gensym-counter*");
+    var gensymCounterSym = Sym("*gensym-counter*");
     globals[gensymCounterSym] = 1;
     def("gensym", 0, (List a) {
       int i = globals[gensymCounterSym];
@@ -343,26 +580,24 @@ class Interp {
     });
 
     def("make-symbol", 1, (List a) => new Sym.internal(a[0]));
-    def("intern", 1, (List a) => new Sym(a[0]));
+    def("intern", 1, (List a) => Sym(a[0]));
     def("symbol-name", 1, (List a) => (a[0] as Sym).name);
 
-    def("apply", 2, (List a) =>
-        eval(new Cell(a[0], mapcar(a[1], qqQuote)), null));
+    def("apply", 2, (List a) => eval(Cell(a[0], mapcar(a[1], qqQuote)), null));
 
     def("exit", 1, (List a) => exit(a[0]));
-    def("dump", 0, (List a) =>
-        globals.keys.fold(null, (x, y) => new Cell(y, x)));
-    globals[new Sym("*version*")] =
-      new Cell(1.27, new Cell("Dart", new Cell("Nukata Lisp", null)));
+    def("dump", 0, (List a) => globals.keys.fold(null, (x, y) => Cell(y, x)));
+    globals[Sym("*version*")] =
+      Cell(2.000, Cell("Dart", Cell("Nukata Lisp", null)));
     // named after Tōkai-dō Mikawa-koku Nukata-gun (東海道 三河国 額田郡)
   }
 
-  /// Define a built-in function by giving a name, an arity, and a body.
+  /// Defines a built-in function by giving a name, an arity, and a body.
   void def(String name, int carity, BuiltInFuncBody body) {
-    globals[new Sym(name)] = new BuiltInFunc(name, carity, body);
+    globals[Sym(name)] = BuiltInFunc(name, carity, body);
   }
 
-  /// Evaluate a Lisp expression in an environment.
+  /// Evaluates a Lisp expression in an environment.
   eval(x, Cell env) {
     try {
       for (;;) {
@@ -371,7 +606,7 @@ class Interp {
         } else if (x is Sym) {
           if (globals.containsKey(x))
             return globals[x];
-          throw new EvalException("void variable", x);
+          throw EvalException("void variable", x);
         } else if (x is Cell) {
           var fn = x.car;
           Cell arg = cdrCell(x);
@@ -379,7 +614,7 @@ class Interp {
             if (fn == quoteSym) {
               if (arg != null && arg.cdr == null)
                 return arg.car;
-              throw new EvalException("bad quote", x);
+              throw EvalException("bad quote", x);
             } else if (fn == prognSym) {
               x = _evalProgN(arg, env);
             } else if (fn == condSym) {
@@ -390,22 +625,22 @@ class Interp {
               return _compile(arg, env, Closure.make);
             } else if (fn == macroSym) {
               if (env != null)
-                throw new EvalException("nested macro", x);
+                throw EvalException("nested macro", x);
               return _compile(arg, null, Macro.make);
             } else if (fn == quasiquoteSym) {
               if (arg != null && arg.cdr == null)
                 x = qqExpand(arg.car);
               else
-                throw new EvalException("bad quasiquote", x);
+                throw EvalException("bad quasiquote", x);
             } else {
-              throw new EvalException("bad keyword", fn);
+              throw EvalException("bad keyword", fn);
             }
           } else {      // Application of a function
-            // Expand fn = eval(fn, env) here on Sym for speed.
+            // Expands fn = eval(fn, env) here on Sym for speed.
             if (fn is Sym) {
               fn = globals[fn];
               if (fn == null)
-                throw new EvalException("undefined", x.car);
+                throw EvalException("undefined", x.car);
             } else {
               fn = eval(fn, env);
             }
@@ -418,7 +653,7 @@ class Interp {
             } else if (fn is BuiltInFunc) {
               return fn.evalWith(this, arg, env);
             } else {
-              throw new EvalException("not applicable", fn);
+              throw EvalException("not applicable", fn);
             }
           }
         } else if (x is Lambda) {
@@ -434,7 +669,7 @@ class Interp {
     }
   }
 
-  /// (progn E1 E2.. En) => Evaluate E1, E2, .. except for En and return it.
+  /// (progn E1 E2.. En) => Evaluates E1, E2, .. except for En and returns it.
   _evalProgN(Cell j, Cell env) {
     if (j == null)
       return null;
@@ -447,7 +682,7 @@ class Interp {
     }
   }
 
-  /// Evaluate a conditional expression and return the selection unevaluated.
+  /// Evaluates a conditional expression and returns the selection unevaluated.
   _evalCond(Cell j, Cell env) {
     for (; j != null; j = cdrCell(j)) {
       var clause = j.car;
@@ -461,46 +696,46 @@ class Interp {
             return _evalProgN(body, env);
         }
       } else if (clause != null) {
-        throw new EvalException("cond test expected", clause);
+        throw EvalException("cond test expected", clause);
       }
     }
     return null;                // No clause holds.
   }
 
-  /// (setq V1 E1 ..) => Evaluate Ei and assign it to Vi; return the last.
+  /// (setq V1 E1 ..) => Evaluates Ei and assigns it to Vi; returns the last.
   _evalSetQ(Cell j, Cell env) {
     var result = null;
     for (; j != null; j = cdrCell(j)) {
       var lval = j.car;
       j = cdrCell(j);
       if (j == null)
-        throw new EvalException("right value expected", lval);
+        throw EvalException("right value expected", lval);
       result = eval(j.car, env);
       if (lval is Arg)
         lval.setValue(result, env);
       else if (lval is Sym && lval is! Keyword)
         globals[lval] = result;
       else
-        throw new NotVariableException(lval);
+        throw NotVariableException(lval);
     }
     return result;
   }
 
-  /// Compile a Lisp list (macro ...) or (lambda ...).
+  /// Compiles a Lisp list (macro ...) or (lambda ...).
   DefinedFunc _compile(Cell arg, Cell env, FuncFactory make) {
     if (arg == null)
-      throw new EvalException("arglist and body expected", arg);
+      throw EvalException("arglist and body expected", arg);
     Map<Sym, Arg> table = {};
     bool hasRest = _makeArgTable(arg.car, table);
     int arity = table.length;
     Cell body = cdrCell(arg);
     body = _scanForArgs(body, table);
-    body = _expandMacros(body, 20); // Expand mcrs statically up to 20 nestings
+    body = _expandMacros(body, 20); // Expands ms statically up to 20 nestings.
     body = _compileInners(body);
     return make((hasRest) ? -arity : arity, body, env);
   }
 
-  /// Expand macros and quasi-quotations in an expression.
+  /// Expands macros and quasi-quotations in an expression.
   _expandMacros(j, int count) {
     if (count > 0 && j is Cell) {
       var k = j.car;
@@ -512,7 +747,7 @@ class Interp {
           var z = qqExpand(d.car);
           return _expandMacros(z, count);
         }
-        throw new EvalException("bad quasiquote", j);
+        throw EvalException("bad quasiquote", j);
       } else {
         if (k is Sym)
           k = globals[k];       // null if k does not have a value
@@ -529,7 +764,7 @@ class Interp {
     }
   }
 
-  /// Replace inner lambda-expressions with Lambda instances.
+  /// Replaces inner lambda-expressions with Lambda instances.
   _compileInners(j) {
     if (j is Cell) {
       var k = j.car;
@@ -539,7 +774,7 @@ class Interp {
         Cell d = cdrCell(j);
         return _compile(d, null, Lambda.make);
       } else if (k == macroSym) {
-        throw new EvalException("nested macro", j);
+        throw EvalException("nested macro", j);
       } else {
         return mapcar(j, (x) => _compileInners(x));
       }
@@ -551,7 +786,7 @@ class Interp {
 
 //----------------------------------------------------------------------
 
-/// Make an argument-table; return true if there is a rest argument.
+/// Makes an argument-table; returns true if there is a rest argument.
 bool _makeArgTable(arg, Map<Sym, Arg> table) {
   if (arg == null) {
     return false;
@@ -561,42 +796,42 @@ bool _makeArgTable(arg, Map<Sym, Arg> table) {
     for (; arg != null; arg = cdrCell(arg)) {
       var j = arg.car;
       if (hasRest)
-        throw new EvalException("2nd rest", j);
+        throw EvalException("2nd rest", j);
       if (j == restSym) {       // &rest var
         arg = cdrCell(arg);
         if (arg == null)
-          throw new NotVariableException(arg);
+          throw NotVariableException(arg);
         j = arg.car;
         if (j == restSym)
-          throw new NotVariableException(j);
+          throw NotVariableException(j);
         hasRest = true;
       }
       Sym sym =
         (j is Sym) ? j :
-        (j is Arg) ? j.symbol : throw new NotVariableException(j);
+        (j is Arg) ? j.symbol : throw NotVariableException(j);
       if (table.containsKey(sym))
-        throw new EvalException("duplicated argument name", sym);
-      table[sym] = new Arg(0, offset, sym);
+        throw EvalException("duplicated argument name", sym);
+      table[sym] = Arg(0, offset, sym);
       offset++;
     }
     return hasRest;
   } else {
-    throw new EvalException("arglist expected", arg);
+    throw EvalException("arglist expected", arg);
   }
 }
 
-/// Scan [j] for formal arguments in [table] and replace them with Args.
-/// And scan [j] for free Args not in [table] and promote their levels.
+/// Scans [j] for formal arguments in [table] and replaces them with Args.
+/// And scans [j] for free Args not in [table] and promotes their levels.
 _scanForArgs(j, Map<Sym, Arg> table) {
   if (j is Sym) {
     return table[j] ?? j;
   } else if (j is Arg) {
-    return table[j.symbol] ?? new Arg(j.level + 1, j.offset, j.symbol);
+    return table[j.symbol] ?? Arg(j.level + 1, j.offset, j.symbol);
   } else if (j is Cell) {
     if (j.car == quoteSym) {
       return j;
     } else if (j.car == quasiquoteSym) {
-      return new Cell(quasiquoteSym, _scanForQQ(j.cdr, table, 0));
+      return Cell(quasiquoteSym, _scanForQQ(j.cdr, table, 0));
     } else {
       return mapcar(j, (x) => _scanForArgs(x, table));
     }
@@ -605,18 +840,19 @@ _scanForArgs(j, Map<Sym, Arg> table) {
   }
 }
 
-/// Scan for quasi-quotes & [_scanForArgs] them depending on the nesting level.
+/// Scans for quasi-quotes.
+/// And does [_scanForArgs] them depending on the nesting level.
 _scanForQQ(j, Map<Sym, Arg> table, int level) {
   if (j is Cell) {
     var k = j.car;
     if (k == quasiquoteSym) {
-      return new Cell(k, _scanForQQ(j.cdr, table, level + 1));
+      return Cell(k, _scanForQQ(j.cdr, table, level + 1));
     } else if (k == unquoteSym || k == unquoteSplicingSym) {
       var d = (level == 0) ? _scanForArgs(j.cdr, table) :
                              _scanForQQ(j.cdr, table, level - 1);
       if (identical(d, j.cdr))
         return j;
-      return new Cell(k, d);
+      return Cell(k, d);
     } else {
       return mapcar(j, (x) => _scanForQQ(x, table, level));
     }
@@ -625,7 +861,7 @@ _scanForQQ(j, Map<Sym, Arg> table, int level) {
   }
 }
 
-/// Get cdr of list [x] as a Cell or null.
+/// Gets cdr of list [x] as a Cell or null.
 Cell cdrCell(Cell x) {
   var k = x.cdr;
   if (k is Cell)
@@ -633,15 +869,15 @@ Cell cdrCell(Cell x) {
   else if (k == null)
     return null;
   else
-    throw new EvalException("proper list expected", x);
+    throw EvalException("proper list expected", x);
 }
 
 //----------------------------------------------------------------------
 // Quasi-Quotation
 
-/// Expand [x] of any quasi-quotation `x into the equivalent S-expression.
+/// Expands [x] of any quasi-quotation `x into the equivalent S-expression.
 qqExpand(x) {
-  return _qqExpand0(x, 0);      // Begin with the nesting level 0.
+  return _qqExpand0(x, 0);      // Begins with the nesting level 0.
 }
 
 _qqExpand0(x, int level) {
@@ -656,17 +892,17 @@ _qqExpand0(x, int level) {
       if (k.car == listSym || k.car == consSym)
         return k;
     }
-    return new Cell(appendSym, t);
+    return Cell(appendSym, t);
   } else {
     return qqQuote(x);
   }
 }
 
-/// Quote [x] so that the result evaluates to [x].
+/// Quotes [x] so that the result evaluates to [x].
 qqQuote(x) =>
-  (x is Sym || x is Cell) ? new Cell(quoteSym, new Cell(x, null)) : x;
+  (x is Sym || x is Cell) ? Cell(quoteSym, Cell(x, null)) : x;
 
-// Expand [x] of `x so that the result can be used as an argument of append.
+// Expands [x] of `x so that the result can be used as an argument of append.
 // Example 1: (,a b) => h=(list a) t=((list 'b)) => ((list a 'b))
 // Example 2: (,a ,@(cons 2 3)) => h=(list a) t=((cons 2 3))
 //                              => ((cons a (cons 2 3)))
@@ -682,44 +918,44 @@ Cell _qqExpand1(x, int level) {
     var h = _qqExpand2(x.car, level);
     Cell t = _qqExpand1(x.cdr, level); // != null
     if (t.car == null && t.cdr == null) {
-      return new Cell(h, null);
+      return Cell(h, null);
     } else if (h is Cell) {
       if (h.car == listSym) {
         if (t.car is Cell) {
           Cell tcar = t.car;
           if (tcar.car == listSym) {
             var hh = _qqConcat(h, tcar.cdr);
-            return new Cell(hh, t.cdr);
+            return Cell(hh, t.cdr);
           }
         }
         if (h.cdr is Cell) {
           var hh = _qqConsCons(h.cdr, t.car);
-          return new Cell(hh, t.cdr);
+          return Cell(hh, t.cdr);
         }
       }
     }
-    return new Cell(h, t);
+    return Cell(h, t);
   } else {
-    return new Cell(qqQuote(x), null);
+    return Cell(qqQuote(x), null);
   }
 }
 
 // (1 2), (3 4) => (1 2 3 4)
 _qqConcat(Cell x, Object y) =>
-  (x == null) ? y : new Cell(x.car, _qqConcat(x.cdr, y));
+  (x == null) ? y : Cell(x.car, _qqConcat(x.cdr, y));
 
 // (1 2 3), "a" => (cons 1 (cons 2 (cons 3 "a")))
 _qqConsCons(Cell x, Object y) =>
   (x == null) ? y :
-  new Cell(consSym, new Cell(x.car, new Cell(_qqConsCons(x.cdr, y), null)));
+  Cell(consSym, Cell(x.car, Cell(_qqConsCons(x.cdr, y), null)));
 
-// Expand [y] = x.car of `x so that the result can be used as an arg of append.
+// Expands [y] = x.car of `x so that result can be used as an arg of append.
 // Example: ,a => (list a); ,@(foo 1 2) => (foo 1 2); b => (list 'b)
 _qqExpand2(y, int level) {
   if (y is Cell) {
     if (y.car == unquoteSym) {  // ,a
       if (level == 0)
-        return new Cell(listSym, y.cdr); // ,a => (list a)
+        return Cell(listSym, y.cdr); // ,a => (list a)
       level--;
     } else if (y.car == unquoteSplicingSym) { // ,@a
       if (level == 0)
@@ -729,7 +965,7 @@ _qqExpand2(y, int level) {
       level++;
     }
   }
-  return new Cell(listSym, new Cell(_qqExpand0(y, level), null));
+  return Cell(listSym, Cell(_qqExpand0(y, level), null));
 }
 
 //----------------------------------------------------------------------
@@ -742,17 +978,17 @@ class Reader {
   int _lineNo = 0;
   bool _erred = false;
 
-  /// Construct a Reader which will read Lisp expressions from a given arg.
+  /// Constructs a Reader which will read Lisp expressions from a given arg.
   Reader(this._rf);
 
-  /// Read a Lisp expression; return #EOF if the input runs out normally.
+  /// Reads a Lisp expression; returns #EOF if the input runs out normally.
   Future<Object> read() async {
     try {
       await _readToken();
       return await _parseExpression();
     } on FormatException catch (ex) {
       _erred = true;
-      throw new EvalException("syntax error",
+      throw EvalException("syntax error",
           "${ex.message} -- $_lineNo: ${_rf.current}", false);
     }
   }
@@ -763,20 +999,18 @@ class Reader {
       return await _parseListBody();
     } else if (_token == singleQuoteSym) { // 'a => (quote a)
       await _readToken();
-      return new Cell(quoteSym, new Cell(await _parseExpression(), null));
+      return Cell(quoteSym, Cell(await _parseExpression(), null));
     } else if (_token == backQuoteSym) { // `a => (quasiquote a)
       await _readToken();
-      return new Cell(quasiquoteSym,
-          new Cell(await _parseExpression(), null));
+      return Cell(quasiquoteSym, Cell(await _parseExpression(), null));
     } else if (_token == commaSym) { // ,a => (unquote a)
       await _readToken();
-      return new Cell(unquoteSym, new Cell(await _parseExpression(), null));
+      return Cell(unquoteSym, Cell(await _parseExpression(), null));
     } else if (_token == commaAtSym) { // ,@a => (unquote-splicing a)
       await _readToken();
-      return new Cell(unquoteSplicingSym,
-          new Cell(await _parseExpression(), null));
+      return Cell(unquoteSplicingSym, Cell(await _parseExpression(), null));
     } else if (_token == dotSym || _token == rightParenSym) {
-      throw new FormatException('unexpected "$_token"');
+      throw FormatException('unexpected "$_token"');
     } else {
       return _token;
     }
@@ -784,7 +1018,7 @@ class Reader {
 
   Future<Cell> _parseListBody() async {
     if (_token == #EOF) {
-      throw new FormatException("unexpected EOF");
+      throw FormatException("unexpected EOF");
     } else if (_token == rightParenSym) {
       return null;
     } else {
@@ -796,15 +1030,15 @@ class Reader {
         e2 = await _parseExpression();
         await _readToken();
         if (_token != rightParenSym)
-          throw new FormatException('")" expected: $_token');
+          throw FormatException('")" expected: $_token');
       } else {
         e2 = await _parseListBody();
       }
-      return new Cell(e1, e2);
+      return Cell(e1, e2);
     }
   }
 
-  /// Read the next token and set it to [_token].
+  /// Reads the next token and sets it to [_token].
   Future _readToken() async {
     while (! _tokens.moveNext() || _erred) { // line ends or erred last time
       _erred = false;
@@ -823,7 +1057,7 @@ class Reader {
       String s = _token;
       int n = s.length - 1;
       if (n < 1 || s[n] != '"')
-        throw new FormatException("bad string: '$s'");
+        throw FormatException("bad string: '$s'");
       s = s.substring(1, n);
       s = s.replaceAllMapped(_escapePat, (Match m) {
         String key = m[1];
@@ -832,25 +1066,24 @@ class Reader {
       _token = s;
       return;
     }
-    try {
-      _token = num.parse(_token);
-    } on FormatException {
-      if (_token == "nil") {
-        _token = null;
-      } else if (_token == "t") {
-        _token = true;
-      } else {
-        _token = new Sym(_token);
-      }
+    var n = tryParse(_token);
+    if (n != null) {
+      _token = n;
+    } else if (_token == "nil") {
+      _token = null;
+    } else if (_token == "t") {
+      _token = true;
+    } else {
+      _token = Sym(_token);
     }
   }
 
   /// Regular expression to split a line into Lisp tokens
   static final _tokenPat =
-      new RegExp('\\s+|;.*\$|("(\\\\.?|.)*?"|,@?|[^()\'`~"; \t]+|.)');
+    RegExp('\\s+|;.*\$|("(\\\\.?|.)*?"|,@?|[^()\'`~"; \t]+|.)');
 
   /// Regular expression to take an escape sequence out of a string
-  static final _escapePat = new RegExp(r'\\(.)');
+  static final _escapePat = RegExp(r'\\(.)');
 
   /// Mapping from a character of escape sequence to its string value
   static final Map<String, String> _escapes = <String, String>{
@@ -867,7 +1100,7 @@ final Map<Sym, String> _quotes = <Sym, String>{
   quoteSym: "'", quasiquoteSym: "`", unquoteSym: ",", unquoteSplicingSym: ",@"
 };
 
-/// Make a string representation of a Lisp expression
+/// Makes a string representation of a Lisp expression
 String str(x, [bool quoteString=true, int count, Set<Cell> printed]) {
   if (x == null) {
     return "nil";
@@ -882,7 +1115,7 @@ String str(x, [bool quoteString=true, int count, Set<Cell> printed]) {
   } else if (x is String) {
     if (! quoteString)
       return x;
-    var bf = new StringBuffer('"');
+    var bf = StringBuffer('"');
     for (int ch in x.runes)
       switch (ch) {
         case 0x08: bf.write(r"\b"); break;
@@ -909,11 +1142,11 @@ String str(x, [bool quoteString=true, int count, Set<Cell> printed]) {
   }
 }
 
-/// Make a string representation of a list omitting its "(" and ")".
+/// Makes a string representation of a list omitting its "(" and ")".
 String _strListBody(Cell x, int count, Set<Cell> printed) {
-  printed ??= new Set<Cell>();
+  printed ??= Set<Cell>();
   count ??= 4;                  // threshold of ellipsis for circular lists
-  var s = new List<String>();
+  var s = List<String>();
   var y;
   for (y = x; y is Cell; y = y.cdr) {
     if (printed.add(y)) {
@@ -938,13 +1171,13 @@ String _strListBody(Cell x, int count, Set<Cell> printed) {
 
 //----------------------------------------------------------------------
 
-/// Run REPL (Read-Eval-Print Loop).
+/// Runs REPL (Read-Eval-Print Loop).
 Future run(Interp interp, Stream<String> input) async {
   bool interactive = (input == null);
   input ??= stdin.transform(const Utf8Codec().decoder);
   input = input.transform(const LineSplitter());
-  var lines = new StreamIterator(input);
-  var reader = new Reader(lines);
+  var lines = StreamIterator(input);
+  var reader = Reader(lines);
   for (;;) {
     if (interactive) {
       stdout.write("> ");
@@ -967,29 +1200,30 @@ Future run(Interp interp, Stream<String> input) async {
 }
 
 // Keywords
-final Sym condSym = new Keyword("cond");
-final Sym lambdaSym = new Keyword("lambda");
-final Sym macroSym = new Keyword("macro");
-final Sym prognSym = new Keyword("progn");
-final Sym quasiquoteSym = new Keyword("quasiquote");
-final Sym quoteSym = new Keyword("quote");
-final Sym setqSym = new Keyword("setq");
+final Sym condSym = Keyword("cond");
+final Sym lambdaSym = Keyword("lambda");
+final Sym macroSym = Keyword("macro");
+final Sym prognSym = Keyword("progn");
+final Sym quasiquoteSym = Keyword("quasiquote");
+final Sym quoteSym = Keyword("quote");
+final Sym setqSym = Keyword("setq");
 
-/// Make a Lisp interpreter initialized with [prelude].
+/// Makes a Lisp interpreter initialized with [prelude].
 Future<Interp> makeInterp() async {
   // Dart initializes static variables lazily.  Therefore, all keywords are
   // referred explicitly here so that they are initialized as keywords
   // before any occurrences of symbols of their names.
   [condSym, lambdaSym, macroSym, prognSym, quasiquoteSym, quoteSym, setqSym];
 
-  var interp = new Interp();
+  var interp = Interp();
   Future<String> fs = new Future.value(prelude);
   Stream<String> ss = new Stream.fromFuture(fs);
   await run(interp, ss);
   return interp;
 }
 
-/// Run each arg as a Lisp script in order; run interactively for no arg or -.
+/// Runs each arg as a Lisp script in order.
+/// Runs interactively for no arg or -.
 main(List<String> args) async {
   try {
     Interp interp = await makeInterp();
@@ -998,7 +1232,7 @@ main(List<String> args) async {
         await run(interp, null);
         print("Goodbye");
       } else {
-        var file = new File(fileName);
+        var file = File(fileName);
         Stream<List<int>> bytes = file.openRead();
         Stream<String> input = bytes.transform(const Utf8Codec().decoder);
         await run(interp, input);
@@ -1012,7 +1246,7 @@ main(List<String> args) async {
 }
 
 /// Lisp initialization script
-String prelude = """
+const String prelude = """
 (setq defmacro
       (macro (name args &rest body)
              `(progn (setq ,name (macro ,args ,@body))
@@ -1041,6 +1275,7 @@ String prelude = """
 
 (setq
  = eql
+ rem %
  null not
  setcar rplaca
  setcdr rplacd)
@@ -1190,7 +1425,7 @@ String prelude = """
 
 /*
   Copyright (c) 2015, 2016 OKI Software Co., Ltd.
-  Copyright (c) 2018 SUZUKI Hisao
+  Copyright (c) 2018, 2019 SUZUKI Hisao
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),

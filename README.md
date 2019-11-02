@@ -1,11 +1,11 @@
 # Lisp in Dart
 
-This is a small Lisp interpreter I wrote the original in 2015 (H27) in Dart 1.9.
+This is a small Lisp interpreter in Dart.
+In 2015 (H27), I wrote the first version in Dart 1.9.
 It had been presented under the MIT License at
 <http://www.oki-osk.jp/esc/dart/lisp.html> (broken link)
 until the spring of 2017 (H29).
-I slightly modified it to match Dart 2.0 and made the repository in GitHub
-in 2018 (H30).
+In 2018 (H30), I slightly modified it to match Dart 2.0 and made the repository in GitHub.
 
 Now in 2019 (R1), I found the old hack in `Sym` class
 
@@ -16,7 +16,7 @@ Now in 2019 (R1), I found the old hack in `Sym` class
 which had once accelerated the interpreter is effective again in Dart 2.5.
 So I included the hack in `Sym` class again.
 In addition, I made use of `BigInt` 
-since `int` does not have inifinite-precision in Dart 2.0 and later.
+because `int` does not have inifinite-precision in Dart 2.0 and later.
 
 See [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md)
 for other details of the implementation.
